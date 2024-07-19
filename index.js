@@ -119,19 +119,27 @@ app.get("/books", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-app.get("/books/:id", async (req, res) => {
+app.get("/books", async (req, res) => {
   try {
-    const bookId = req.params.id;
-    const query = "SELECT * FROM books WHERE id=?";
-    const results = await executeQuery(query, [bookId]);
+    const query = "SELECT * FROM books";
+    const results = await executeQuery(query);
 
     if (results.length === 0) {
       return res.status(204).json({ message: "No books found" });
     }
 
     res.status(200).json({
+      count: results.length,
       books: results,
     });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+app.get("/", async (req, res) => {
+  try {
+    res.status(200).json({ message: "Server is working" });
   } catch (error) {
     console.error("Database error:", error);
     res.status(500).json({ error: "Internal server error" });
