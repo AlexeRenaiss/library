@@ -9,7 +9,7 @@ const dbConfig = {
   host: "localhost",
   user: "root",
   password: "root",
-  database: "library_db",
+  database: "library",
 };
 // Function to connect to the database and execute queries
 async function executeQuery(query, params) {
@@ -23,18 +23,31 @@ async function executeQuery(query, params) {
 }
 app.post("/books", async (req, res) => {
   const { title, author, isbn } = req.body;
+  
+  // Validate input
+  if (!title || !author || !isbn) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
   try {
-    if (title && author && isbn) {
-      const query = "INSERT INTO books (title, author, isbn) VALUES (?, ?, ?)";
-      const result = await executeQuery(query, [title, author, isbn]);
-      res
-        .status(201)
-        .json({ message: "Book added successfully", bookId: result.insertId });
+    const query = 'INSERT INTO books (title, author, isbn) VALUES (?, ?, ?)';
+    const results = await executeQuery(query, [title, author, isbn]);
+    
+    // Check if the insert was successful
+    if (results.affectedRows === 1) {
+      res.status(201).json({ 
+        id: results.insertId, 
+        title, 
+        author, 
+        isbn,
+        message: 'Book added successfully'
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to add book' });
     }
-    res.status(400).json({ message: "All fields are mandatory" });
-  } catch (err) {
-    console.error("Error adding book:", err);
-    res.status(500).json({ message: "Error adding book" });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 app.delete("/books/:id", async (req, res) => {
@@ -78,15 +91,20 @@ app.put("/books/:id", async (req, res) => {
 });
 app.get("/books", async (req, res) => {
   try {
-    const query = "SELECT * FROM books";
-    const result = await executeQuery(query);
-    res.status(201).json({
-      message: "All books fetched successfully",
-      books: [...result],
+    const query = 'SELECT * FROM books';
+    const results = await executeQuery(query);
+    
+    if (results.length === 0) {
+      return res.status(204).json({ message: 'No books found' });
+    }
+    
+    res.status(200).json({
+      count: results.length,
+      books: results
     });
-  } catch (err) {
-    console.error("Error adding book:", err);
-    res.status(500).json({ message: "Error adding book" });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 app.listen(port, () => {
